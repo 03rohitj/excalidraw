@@ -13,7 +13,7 @@
     "@types/node": "^22.15.3"
   },
   "devDependencies": {
-    "@repo/backend-common": "workspace:*"
+    "@repo/typescript-config": "workspace:*"
   },
   "keywords": [],
   "author": "",
