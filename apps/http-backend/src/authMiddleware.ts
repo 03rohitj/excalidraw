@@ -1,7 +1,7 @@
 import { NextFunction, Request, Response } from "express";
 import jwt from "jsonwebtoken";
 import { json } from "zod/v4";
-import { JWT_SECRET } from "./config";
+import { JWT_SECRET } from "@repo/backend-common/config";
 
 export const authMiddleware = (req: Request, res: Response, next: NextFunction) => {
     

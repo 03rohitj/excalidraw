@@ -16,6 +16,11 @@
     "jsonwebtoken": "^9.0.2",
     "ts": "^0.2.2"
   },
+  "devDependencies": {
+    "@repo/backend-common" : "workspace:*",
+    "@repo/common":"workspace:*",
+    "@repo/db":"workspace:*"
+  },
   "keywords": [],
   "author": "",
   "license": "ISC",

@@ -1,14 +1,12 @@
 import express from "express";
-import { z } from "zod";
+import { signupZodSchema } from "@repo/common/types";
 import jwt from "jsonwebtoken";
-import { JWT_SECRET } from "./config";
+import { JWT_SECRET } from "@repo/backend-common/config";
+
 import { authMiddleware } from "./authMiddleware";
 const app = express();
 
-const signupZodSchema = z.object({
-    "username" : z.string().trim().min(6, "Username should be of minimum 6 letters"),
-    "password" : z.string().trim().min(6, "Password should be of minimum 6 letters")
-});
+
 
 app.post("/signup", async (req, res) =>{
 
@@ -21,6 +19,7 @@ app.post("/signup", async (req, res) =>{
         const { username, password } = req.body;    
 
         res.status(201).json({
+            "userId"  : "123",
             "message" : "Successfully signedup with user : "+username
         });
     } catch (error) {
