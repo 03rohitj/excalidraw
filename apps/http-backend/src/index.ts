@@ -142,4 +142,26 @@ app.get("/chats/:roomId", async(req, res) =>{
     return;
 });
 
+//Endpoint to get roomId from roomSlug(i.e. roomName)
+app.get("/room/:roomSlug", async(req, res) =>{        //Room Slug means room name, this endpoints gives room id from roomSlug
+    const roomSlug = req.params.roomSlug;
+    console.log(">>>>BE Hit, /room/roomSlug : "+roomSlug);
+    const room = await prismaClient.room.findFirst({
+        where:{
+            slug: roomSlug
+        }
+    });
+
+    if(!room){
+        res.status(400).json({
+            "message" : "Room not found"
+        });
+        return;
+    }
+    console.log(">>>>BE : Find Room Id hit : "+room.id);
+    res.status(200).json({
+        roomId: room.id
+    });
+    return;
+});
 app.listen(3001);
