@@ -1,6 +1,7 @@
 import { WebSocket, WebSocketServer } from 'ws';
 import jwt, { JwtPayload } from 'jsonwebtoken';
 import { JWT_SECRET } from "@repo/backend-common/config";
+import { prismaClient } from "@repo/db/client";
 
 const wss = new WebSocketServer({ port: 8080 });
 // try tsx dependency for compilation
@@ -28,6 +29,7 @@ function checkUser(token: string) : string | null{
 
     return decoded.userId;
 }
+
 wss.on('connection', function connection(ws, request) {
     ws.on('error', console.error);
     const url = request.url;
@@ -44,6 +46,7 @@ wss.on('connection', function connection(ws, request) {
       return;
     }
 
+    console.log(">>>WS Connection ValidUser : "+userId);
     //Add user to the list of connected users
     users.push({
       userId, 
@@ -52,13 +55,15 @@ wss.on('connection', function connection(ws, request) {
     });
 
 
-  ws.on('message', function message(data) {
+  ws.on('message', async function message(data) {
     const parsedData = JSON.parse(data as unknown as string);
     //In data payload, type field should be passed to determine the request
     if(parsedData.type === "join_room"){
       const user = users.find(x => x.ws === ws);
       //ToDo : verify roomId axists, verify user has permission to access room, etc etc
       user?.rooms.push(parsedData.roomId);
+      console.log(">>>>WS JoinRoom : User : "+user?.userId+" joined room : "+parsedData.roomId);
+      
     }
 
     if(parsedData.type === "leave_room"){
@@ -67,20 +72,35 @@ wss.on('connection', function connection(ws, request) {
         return
 
       user.rooms = user.rooms.filter(x => x ===parsedData.room);
+      console.log(">>>>WS LeaveRoom : User : "+user?.userId+" left room : "+parsedData.roomId);
     }
 
     if(parsedData.type === "chat"){
       const roomId = parsedData.roomId;
       const message = parsedData.message;
 
+      console.log(">>>>WS Chat : Message : "+message+" roomId : "+roomId);
+      
+
+      //NOTE : This approach is not good(storing in db and then sending through ws), so try and use queue for messaging. Take ref. from harkirat's chess YT video(TODO). 
+      //We can use Redux or some state management lib.
+      await prismaClient.chat.create({
+        data:{
+          roomId,
+          message,
+          userId
+        }
+      });
+
       users.forEach(user => {
         if(user.rooms.includes(roomId)){
+          console.log(">>>>WS Chat : broadcasting message to user - "+user.userId);
           user.ws.send(JSON.stringify({     //We can send only string or binary data in websockets
             type: "chat",
             message : message,
             roomId
           }));
-        }
+        }   //ToDo : User not getting broadcasted messages. Check
       });
     }
   });

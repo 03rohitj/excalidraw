@@ -120,4 +120,26 @@ app.post("/room", authMiddleware , async (req, res) =>{
 
 });
 
+//endpoint to get all messages in a particular room
+app.get("/chats/:roomId", async(req, res) =>{
+    const roomId = parseInt(req.params.roomId);
+    const messages = await prismaClient.chat.findMany({
+        
+        where:{
+            roomId:roomId
+        },
+        orderBy:{
+            id : "desc"
+        },
+        take: 50
+    });
+
+    console.log("---->>>Get Room messages : "+messages);
+
+    res.status(200).json({
+        messages
+    });
+    return;
+});
+
 app.listen(3001);
