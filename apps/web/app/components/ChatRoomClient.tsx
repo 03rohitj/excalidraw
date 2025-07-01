@@ -10,7 +10,7 @@ export function ChatRoomClient({
     id: string
 }){
     const {socket, loading} = useSocket();
-    const [chats, setChats] = useState(messages);
+    const [chats, setChats] = useState(messages);               //Fetch prev messages from db and store them in chats
     const [currentMessage, setCurrentMessage] = useState("");       //Current message in chat input box
 
     useEffect(() => {
@@ -27,6 +27,7 @@ export function ChatRoomClient({
                     setChats(c => [...c, {message: parsedData.message}]);
                 }
             }
+
         }
     }, [socket, loading, id]);
 
