@@ -79,21 +79,24 @@ wss.on('connection', function connection(ws, request) {
       const roomId = parsedData.roomId;
       const message = parsedData.message;
 
-      console.log(">>>>WS Chat : Message : "+message+" roomId : "+roomId);
+      // console.log(">>>ws-backend : onmessage : parsedData = ",parsedData);
+      // console.log(">>>>WS Chat : Message : "+message+" roomId : "+roomId);
       
 
       //NOTE : This approach is not good(storing in db and then sending through ws), so try and use queue for messaging. Take ref. from harkirat's chess YT video(TODO). 
       //We can use Redux or some state management lib.
-      await prismaClient.chat.create({
+      const newRecord = await prismaClient.chat.create({
         data:{
           roomId,
           message,
           userId
         }
       });
-
+      
+      console.log(">>>>>ws-backend : onmessage(chat) : curRoomId : ", roomId);
       users.forEach(user => {
-        if(user.rooms.includes(roomId)){
+        console.log(">>>>>ws-backend : onmessage(chat) : user : ",user.userId, " , rooms : ", user.rooms);
+        if(user.rooms.includes(String(roomId))){
           console.log(">>>>WS Chat : broadcasting message to user - "+user.userId);
           user.ws.send(JSON.stringify({     //We can send only string or binary data in websockets
             type: "chat",

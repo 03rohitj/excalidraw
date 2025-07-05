@@ -5,10 +5,13 @@ import { JWT_SECRET, SALT_ROUNDS } from "@repo/backend-common/config";
 import { prismaClient } from "@repo/db/client";
 import { authMiddleware } from "./authMiddleware";
 import bcrypt from "bcrypt";
+import cors from "cors";
 
 const app = express();
 
 app.use(express.json());            //Require to parse json into req object
+app.use(cors());
+
 app.post("/signup", async(req, res) =>{
 
     console.log("------>>>/signup hit : ",req.body);
@@ -134,7 +137,6 @@ app.get("/chats/:roomId", async(req, res) =>{
         take: 50
     });
 
-    console.log("---->>>Get Room messages : "+messages);
 
     res.status(200).json({
         messages

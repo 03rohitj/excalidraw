@@ -6,8 +6,8 @@ interface ButtonProps {
   variant: "primary" | "outline" | "secondary";
   className?: string;
   size: string;
-  onClick: () => void;
-  children: ReactNode;      //It could be a text or any component
+  onClick?: () => void;
+  children?: ReactNode;      //It could be a text or any component
 }
 
 export const Button = ({ variant, className, size, onClick, children }: ButtonProps) => {
