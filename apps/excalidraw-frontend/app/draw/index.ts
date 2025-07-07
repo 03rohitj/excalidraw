@@ -13,12 +13,11 @@ type Shape = {
     centerX: number;
     centerY: number;
     radius: number;
-}
+} | null;
 
 
-export async function initDraw(canvas : HTMLCanvasElement, roomId: string, socket: WebSocket){
+export async function initDraw(canvas : HTMLCanvasElement, roomId: string, socket: WebSocket, shapeType: "rect" | "circle" | "line"){
     const ctx = canvas.getContext('2d');
-
     let existingShapes : Shape[] = await getExistingShapes(roomId);
     if(!ctx){
         return;
@@ -46,6 +45,7 @@ export async function initDraw(canvas : HTMLCanvasElement, roomId: string, socke
     let startX = 0, startY = 0;
 
     canvas.addEventListener("mousedown", (e) => {
+        console.log(">>>>FE initDraw shapeType : ", shapeType);
         clicked = true;
         startX = e.clientX;
         startY = e.clientY;
@@ -53,13 +53,28 @@ export async function initDraw(canvas : HTMLCanvasElement, roomId: string, socke
 
     canvas.addEventListener("mouseup", (e) => {
         clicked = false;
-        const shape: Shape = {
-            type: "rect",
-            x: startX,
-            y: startY,
-            width: e.clientX-startX,
-            height: e.clientY-startY
-        };
+        
+        let shape: Shape;
+        if( shapeType === "rect"){
+            shape = {
+                type: "rect",
+                x: startX,
+                y: startY,
+                width: e.clientX-startX,
+                height: e.clientY-startY
+            };
+        }
+        else if(shapeType === "circle"){
+            shape = {
+                type: "circle",
+                centerX: startX,
+                centerY: startY,
+                radius: 0
+            };
+        }
+        else{
+            shape = null;
+        }
         existingShapes.push(shape);
 
         //Send a message across Websocket
