@@ -3,24 +3,32 @@ import { initDraw } from "../draw";
 import { Button } from "../../../../packages/ui/src/button";
 import { IconButton } from "./IconButton";
 import { Circle, Pencil, RectangleHorizontalIcon } from "lucide-react";
+import { Game } from "../draw/Game";
 
-type Shape = "pencil" | "rect" | "circle" | "line";
+export type Tool = "pencil" | "rect" | "circle" | "line";
 
 export function Canvas({roomId, socket} : {roomId: string, socket: WebSocket}){
     const canvasRef = useRef<HTMLCanvasElement>(null);
-    const [selectedTool, setSelectedTool] = useState<Shape>("rect");
+    const [selectedTool, setSelectedTool] = useState<Tool>("rect");
+    const [curGame, setCurGame] = useState<Game>();
 
     //Whenver selectedTool changes
     useEffect(() => {
-        //@ts-ignore
-        window.selectedTool = selectedTool;
-    }, [selectedTool]);
+        curGame?.setTool(selectedTool);
+    }, [selectedTool, curGame]);
 
     useEffect(() => {
         if(canvasRef.current){      //If ref is not null
             const canvas = canvasRef.current;
-            initDraw(canvas, roomId, socket, selectedTool);
+            // initDraw(canvas, roomId, socket);
+            const game = new Game(canvas, roomId, socket);
+            setCurGame(game);
+
+            return () => {
+                game.destroy();
+            }
         }
+
     }, [canvasRef]);
 
     const basicButtonStyle = "cursor-pointer border border-1 bg-green-400 rounded-md p-2 m-2";
@@ -38,7 +46,7 @@ export function Canvas({roomId, socket} : {roomId: string, socket: WebSocket}){
     </div>
 }
 
-function TopBar({selectedTool, setSelectedTool} : {selectedTool:Shape, setSelectedTool: (s: Shape) => void}){
+function TopBar({selectedTool, setSelectedTool} : {selectedTool:Tool, setSelectedTool: (s: Tool) => void}){
     return <div className="fixed top-5 left-5 text-white">
             <div className="flex gap-2">
                 <IconButton activated={ selectedTool === "pencil" }  icon={<Pencil/>} onClick={ () => { setSelectedTool("pencil")}}/>
