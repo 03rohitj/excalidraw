@@ -4,23 +4,22 @@ import { Button } from "../../../../packages/ui/src/button";
 import { IconButton } from "./IconButton";
 import { Circle, Pencil, RectangleHorizontalIcon } from "lucide-react";
 
-type Shape = "rect" | "circle" | "line";
+type Shape = "pencil" | "rect" | "circle" | "line";
 
 export function Canvas({roomId, socket} : {roomId: string, socket: WebSocket}){
     const canvasRef = useRef<HTMLCanvasElement>(null);
-    const curShape = useRef<Shape>("rect");
+    const [selectedTool, setSelectedTool] = useState<Shape>("rect");
 
-    const handleShapeClick = (newShape: Shape) => {
-        curShape.current = newShape;
-        if(canvasRef.current){
-            initDraw(canvasRef.current, roomId, socket, curShape.current);
-        }
-    };
+    //Whenver selectedTool changes
+    useEffect(() => {
+        //@ts-ignore
+        window.selectedTool = selectedTool;
+    }, [selectedTool]);
 
     useEffect(() => {
         if(canvasRef.current){      //If ref is not null
             const canvas = canvasRef.current;
-            initDraw(canvas, roomId, socket, curShape.current);
+            initDraw(canvas, roomId, socket, selectedTool);
         }
     }, [canvasRef]);
 
@@ -33,18 +32,18 @@ export function Canvas({roomId, socket} : {roomId: string, socket: WebSocket}){
 
             <Button size="lg" variant="primary" className="cursor-pointer border-1 min-w-20 p-2 rounded-xl bg-slate-600" onClick={ () => {handleShapeClick("line")}}>Line</Button>
         </div> */}
-        <TopBar/>
+        <TopBar selectedTool={selectedTool} setSelectedTool={setSelectedTool}/>
         <canvas ref={canvasRef} width={window.innerWidth} height={window.innerHeight}></canvas>
         
     </div>
 }
 
-function TopBar(){
-    return <div className="fixed top-10 left-10 text-white">
-            <div className="flex flex-col gap-2">
-                <IconButton icon={<Pencil/>} onClick={ () => {}}></IconButton>
-                <IconButton icon={<RectangleHorizontalIcon/>} onClick={ () => {}}></IconButton>
-                <IconButton icon={<Circle/>} onClick={ () => {}}></IconButton>
+function TopBar({selectedTool, setSelectedTool} : {selectedTool:Shape, setSelectedTool: (s: Shape) => void}){
+    return <div className="fixed top-5 left-5 text-white">
+            <div className="flex gap-2">
+                <IconButton activated={ selectedTool === "pencil" }  icon={<Pencil/>} onClick={ () => { setSelectedTool("pencil")}}/>
+                <IconButton  activated={ selectedTool === "rect" }  icon={<RectangleHorizontalIcon/>} onClick={ () => { setSelectedTool("rect") }}/>
+                <IconButton  activated={ selectedTool === "circle" } icon={<Circle/>} onClick={ () => { setSelectedTool("circle") }}/>
             </div>
         </div>
 }
