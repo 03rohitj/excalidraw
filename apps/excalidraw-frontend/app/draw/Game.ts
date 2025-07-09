@@ -114,6 +114,12 @@ export class Game {
                     }
                     
                 }
+                else if( shape.type === "line"){
+                    this.ctx.beginPath();
+                    this.ctx.moveTo(shape.startX,shape.startY);
+                    this.ctx.lineTo(shape.endX, shape.endY);
+                    this.ctx.stroke();
+                }
             }
         });
     }
@@ -164,7 +170,13 @@ export class Game {
             }    
         }
         else if(this.selectedTool === "line"){
-            //Todo
+            shape = {
+                type: this.selectedTool,
+                startX: this.startX,
+                startY: this.startY,
+                endX: e.clientX,
+                endY: e.clientY
+            }
         }
         
         this.existingShapes.push(shape);
@@ -212,6 +224,13 @@ export class Game {
                 // console.log(">>>>mousemove : cur - x,y : ", e.clientX, " , ", e.clientY);
                 this.startX = e.clientX;
                 this.startY = e.clientY;
+            }
+            else if( this.selectedTool === "line"){
+                this.clearCanvas();
+                this.ctx.beginPath();
+                this.ctx.moveTo(this.startX,this.startY);
+                this.ctx.lineTo(e.clientX, e.clientY);
+                this.ctx.stroke();
             }
               
         }
