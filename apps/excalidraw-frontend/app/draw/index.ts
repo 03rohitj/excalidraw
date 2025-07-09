@@ -1,4 +1,6 @@
 
+////Remove this file as this is no longer needed.
+
 import { BACKEND_URL } from "@/config";
 import axios from "axios";
 

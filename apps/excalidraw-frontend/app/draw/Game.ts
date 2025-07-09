@@ -1,6 +1,11 @@
 import { Tool } from "../components/Canvas";
 import { getExistingShapes } from "./http";
 
+type PencilCoordinates = {
+    x: number;
+    y: number
+}
+
 type Shape = {
     type: "rect";
     x: number;
@@ -13,12 +18,16 @@ type Shape = {
     centerY: number;
     radius: number;
 } | {
-    type: "pencil";
+    type: "line";
     startX: number;
     startY: number;
     endX: number;
     endY: number;
+} | {
+    type: "pencil";
+    coordinates: PencilCoordinates[];
 } | null;
+
 
 export class Game {
     private canvas: HTMLCanvasElement;
@@ -31,6 +40,8 @@ export class Game {
     private startY = 0;
 
     socket: WebSocket;
+    private pencilCoordinates: PencilCoordinates[];
+
     constructor(canvas: HTMLCanvasElement, roomId: string, socket: WebSocket) {
         this.canvas = canvas;
         this.ctx = canvas.getContext("2d")!;
@@ -38,6 +49,7 @@ export class Game {
         this.socket = socket;
         this.clicked = false;
         this.existingShapes = [];
+        this.pencilCoordinates = []
         this.init();
         this.initHandler();
         this.initMouseHandler();
@@ -89,6 +101,19 @@ export class Game {
                     this.ctx.stroke();
                     this.ctx.closePath();
                 }
+                else if(shape.type === "pencil"){
+                    const allCoordinates = shape.coordinates;
+                    this.ctx.lineCap = "round";
+                    this.ctx.lineWidth = 2;
+                    console.log(">>>>clearCanvas : pencil coords : ", allCoordinates);
+                    for(let i=1; i<allCoordinates.length; i++){
+                        this.ctx.beginPath();
+                        this.ctx.moveTo(allCoordinates[i-1].x, allCoordinates[i-1].y);
+                        this.ctx.lineTo(allCoordinates[i].x, allCoordinates[i].y);
+                        this.ctx.stroke();
+                    }
+                    
+                }
             }
         });
     }
@@ -97,6 +122,11 @@ export class Game {
         this.clicked = true;
         this.startX = e.clientX;
         this.startY = e.clientY;
+        
+        if( this.selectedTool === "pencil"){
+            this.pencilCoordinates = [];            //start storing new coordinates
+            this.pencilCoordinates.push({x: this.startX, y: this.startY});
+        }
     }
 
     mouseUpHandler = (e: MouseEvent) => {
@@ -125,6 +155,17 @@ export class Game {
                 radius: radius
             };
         }
+        else if(this.selectedTool === "pencil"){
+            // this.ctx.stroke();
+            // this.ctx.beginPath();
+            shape = {
+                type: this.selectedTool,
+                coordinates: this.pencilCoordinates
+            }    
+        }
+        else if(this.selectedTool === "line"){
+            //Todo
+        }
         
         this.existingShapes.push(shape);
 
@@ -142,13 +183,14 @@ export class Game {
             const width = e.clientX - this.startX;
             const height = e.clientY - this.startY;
 
-            this.clearCanvas();
             this.ctx.strokeStyle = "rgba(255,255,255)";
             
             if( this.selectedTool === "rect"){
+                this.clearCanvas();
                 this.ctx.strokeRect(this.startX, this.startY, width, height);
             }
             else if( this.selectedTool === "circle"){
+                this.clearCanvas();
                 const centerX = this.startX + (width/2)
                 const centerY = this.startY + (height/2)
 
@@ -157,6 +199,19 @@ export class Game {
                 this.ctx.arc(centerX, centerY, radius, 0, Math.PI * 2);
                 this.ctx.stroke();
                 this.ctx.closePath();
+            }
+            else if(this.selectedTool === "pencil"){
+                this.ctx.lineCap = "round";
+                this.ctx.lineWidth = 2;
+                this.ctx.beginPath();
+                this.ctx.moveTo(this.startX,this.startY);
+                this.ctx.lineTo(e.clientX, e.clientY);
+                this.ctx.stroke();
+                this.pencilCoordinates.push({x:e.clientX, y:e.clientY});
+                // console.log(">>>>mousemove : start - x,y : ", this.startX, " , ", this.startY);
+                // console.log(">>>>mousemove : cur - x,y : ", e.clientX, " , ", e.clientY);
+                this.startX = e.clientX;
+                this.startY = e.clientY;
             }
               
         }
