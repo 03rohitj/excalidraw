@@ -2,10 +2,10 @@ import { useEffect, useRef, useState } from "react";
 import { initDraw } from "../draw";
 import { Button } from "../../../../packages/ui/src/button";
 import { IconButton } from "./IconButton";
-import { Circle, LineChart, Minus, Pencil, PenLine, RectangleHorizontalIcon, SeparatorHorizontal } from "lucide-react";
+import { Circle, Hand, LineChart, Minus, Pencil, PenLine, RectangleHorizontalIcon, SeparatorHorizontal } from "lucide-react";
 import { Game } from "../draw/Game";
 
-export type Tool = "pencil" | "rect" | "circle" | "line";
+export type Tool = "pencil" | "rect" | "circle" | "line" | "hand";
 
 export function Canvas({roomId, socket} : {roomId: string, socket: WebSocket}){
     const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -53,6 +53,7 @@ function TopBar({selectedTool, setSelectedTool} : {selectedTool:Tool, setSelecte
                 <IconButton  activated={ selectedTool === "rect" }  icon={<RectangleHorizontalIcon/>} onClick={ () => { setSelectedTool("rect") }}/>
                 <IconButton  activated={ selectedTool === "circle" } icon={<Circle/>} onClick={ () => { setSelectedTool("circle") }}/>
                 <IconButton  activated={ selectedTool === "line" } icon={<Minus/>} onClick={ () => { setSelectedTool("line") }}/>
+                <IconButton  activated={ selectedTool === "hand" } icon={<Hand/>} onClick={ () => { setSelectedTool("hand") }}/>
             </div>
         </div>
 }

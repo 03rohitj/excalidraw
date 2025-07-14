@@ -38,6 +38,9 @@ export class Game {
     private clicked: boolean;
     private startX = 0;
     private startY = 0;
+    private panX = 0;
+    private panY = 0;
+    private scale = 1;
 
     socket: WebSocket;
     private pencilCoordinates: PencilCoordinates[];
@@ -53,11 +56,12 @@ export class Game {
         this.init();
         this.initHandler();
         this.initMouseHandler();
+        this.resetCanvas();
     }
 
     async init(){
         this.existingShapes = await getExistingShapes(this.roomId);
-        this.clearCanvas();
+        this.refreshCanvas();
     }
 
     initHandler(){
@@ -73,7 +77,7 @@ export class Game {
                 // console.log(">>>initDraw parsed shape in chat : ", parsedMessage.shape);
                 this.existingShapes.push(parsedMessage.shape);
                 //Since new message is received we need to re-render/clear and fill the canvas again
-                this.clearCanvas();
+                this.refreshCanvas();
             }
         }
     }
@@ -83,10 +87,26 @@ export class Game {
         this.selectedTool = tool;
     }
 
-    clearCanvas(){
-        this.ctx.clearRect(0,0, this.canvas.width, this.canvas.height);
+    refreshCanvas(){
+        
+        //Initial code - without pan
+        // this.ctx.clearRect(0,0, this.canvas.width, this.canvas.height);
+        // this.ctx.fillStyle = "rgba(0,0,0)";
+        // this.ctx.fillRect(0,0, this.canvas.width, this.canvas.height);
+
+        this.ctx.setTransform(1, 0, 0, 1, 0, 0); // Reset transform to identity
+        this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+        //transofrm(update) the canvas if panned or scaled
+        this.ctx.transform(this.scale, 0, 0, this.scale, this.panX, this.panY);
+        //Reset the canvas
+        this.ctx.clearRect(
+            -this.panX/this.scale,
+            -this.panY/this.scale,
+            this.canvas.width/this.scale,
+            this.canvas.height/this.scale
+        );
         this.ctx.fillStyle = "rgba(0,0,0)";
-        this.ctx.fillRect(0,0, this.canvas.width, this.canvas.height);
+        this.ctx.fillRect(-this.panX/this.scale, -this.panY/this.scale, this.canvas.width/this.scale, this.canvas.height/this.scale);
         
         this.existingShapes.map( (shape) => {
             if( shape && typeof shape.type !== 'undefined' ){
@@ -95,7 +115,7 @@ export class Game {
                     this.ctx.strokeRect(shape.x, shape.y, shape.width, shape.height);
                 }
                 else if(shape.type === "circle"){
-                    // console.log(">>>>clearCanvas : shape : ", shape);
+                    // console.log(">>>>refreshCanvas : shape : ", shape);
                     this.ctx.beginPath();
                     this.ctx.arc(shape.centerX, shape.centerY, shape.radius, 0, Math.PI * 2);
                     this.ctx.stroke();
@@ -105,7 +125,6 @@ export class Game {
                     const allCoordinates = shape.coordinates;
                     this.ctx.lineCap = "round";
                     this.ctx.lineWidth = 2;
-                    console.log(">>>>clearCanvas : pencil coords : ", allCoordinates);
                     for(let i=1; i<allCoordinates.length; i++){
                         this.ctx.beginPath();
                         this.ctx.moveTo(allCoordinates[i-1].x, allCoordinates[i-1].y);
@@ -126,22 +145,37 @@ export class Game {
     
     mouseDownHandler = (e: MouseEvent) => {
         this.clicked = true;
-        this.startX = e.clientX;
-        this.startY = e.clientY;
+        const { x, y } = this.transformPanScale(e.clientX, e.clientY);
+        this.startX = x;
+        this.startY = y;
         
+        console.log(">>>>mousedown : (panX,panY) : (",this.panX,",",this.panY,")" );
+        console.log(">>>>mousedown : (clientX,clientY) : (",e.clientX,",",e.clientY,")" );
+        console.log(">>>>mousedown : (startX,startY) : (",this.startX,",",this.startY,")" );
         if( this.selectedTool === "pencil"){
             this.pencilCoordinates = [];            //start storing new coordinates
             this.pencilCoordinates.push({x: this.startX, y: this.startY});
         }
+        else if(this.selectedTool === "hand"){
+            //We nee real coordinates not the canvas coordinates, so :
+            this.startX = e.clientX;
+            this.startY = e.clientY;
+        }
+
+        this.refreshCanvas();
     }
 
     mouseUpHandler = (e: MouseEvent) => {
         this.clicked = false;
         let shape: Shape | null = null;
-        const width = e.clientX - this.startX;
-        const height = e.clientY - this.startY;
-        //console.log(">>>>mouseUP : tool : ", this.selectedTool);
-        if( this.selectedTool === "rect"){
+        const { x, y } = this.transformPanScale(e.clientX, e.clientY);
+        const width = x - this.startX;
+        const height = y - this.startY;
+
+        if( this.selectedTool === "hand"){
+            this.ctx.restore();
+        }
+        else if( this.selectedTool === "rect"){
             shape = {
                 type: this.selectedTool,
                 x: this.startX,
@@ -162,8 +196,6 @@ export class Game {
             };
         }
         else if(this.selectedTool === "pencil"){
-            // this.ctx.stroke();
-            // this.ctx.beginPath();
             shape = {
                 type: this.selectedTool,
                 coordinates: this.pencilCoordinates
@@ -174,9 +206,13 @@ export class Game {
                 type: this.selectedTool,
                 startX: this.startX,
                 startY: this.startY,
-                endX: e.clientX,
-                endY: e.clientY
+                endX: x,
+                endY: y
             }
+        }
+        else if(this.selectedTool === "hand"){
+            this.startX = e.clientX;
+            this.startY = e.clientY;
         }
         
         this.existingShapes.push(shape);
@@ -187,22 +223,49 @@ export class Game {
             roomId: parseInt(this.roomId),
             message: JSON.stringify({shape})        //shape is also an object so we need to convert it to string again
         }));       //Used extra braces( {} ) because we need to send shape as an labelled JSON object not anonymous object
+
+        this.refreshCanvas();
         
     }
 
     mouseMoveHandler = (e: MouseEvent) => {
         if(this.clicked){
-            const width = e.clientX - this.startX;
-            const height = e.clientY - this.startY;
+            //Get canvas coordinates
+            const {x,y} = this.transformPanScale(e.clientX, e.clientY);
+
+            const width = x - this.startX;
+            const height = y - this.startY;
 
             this.ctx.strokeStyle = "rgba(255,255,255)";
             
-            if( this.selectedTool === "rect"){
-                this.clearCanvas();
+            if(this.selectedTool === "hand"){
+                
+                //Get transformed startX and startY
+                const { x: startTransformedX, y: startTransformedY } = this.transformPanScale(this.startX, this.startY);
+                const deltaX = x - startTransformedX;   
+                const deltaY = y - startTransformedY;
+
+                this.panX += deltaX*this.scale;             //Update the total panning
+                this.panY += deltaY*this.scale;
+                console.log(">>>>mousemove : (panX,panY) : (",this.panX,",",this.panY,")" );
+                //Update the start pos
+                this.startX = e.clientX;
+                this.startY = e.clientY;
+
+                // this.resetCanvas();
+                // this.ctx.translate(this.panX, this.panY);
+                this.refreshCanvas();
+                // this.ctx.restore();
+
+                // console.log(">>>>mousemove : offsetLeft : ", this.canvas.offsetLeft);
+                // console.log(">>>>mousemove : offsetTop : ", this.canvas.offsetTop);
+            }
+            else if( this.selectedTool === "rect"){
+                this.refreshCanvas();
                 this.ctx.strokeRect(this.startX, this.startY, width, height);
             }
             else if( this.selectedTool === "circle"){
-                this.clearCanvas();
+                this.refreshCanvas();
                 const centerX = this.startX + (width/2)
                 const centerY = this.startY + (height/2)
 
@@ -217,23 +280,30 @@ export class Game {
                 this.ctx.lineWidth = 2;
                 this.ctx.beginPath();
                 this.ctx.moveTo(this.startX,this.startY);
-                this.ctx.lineTo(e.clientX, e.clientY);
+                this.ctx.lineTo(x, y);
                 this.ctx.stroke();
-                this.pencilCoordinates.push({x:e.clientX, y:e.clientY});
+                this.pencilCoordinates.push({x,y});
                 // console.log(">>>>mousemove : start - x,y : ", this.startX, " , ", this.startY);
                 // console.log(">>>>mousemove : cur - x,y : ", e.clientX, " , ", e.clientY);
-                this.startX = e.clientX;
-                this.startY = e.clientY;
+                this.startX = x;
+                this.startY = y;
             }
             else if( this.selectedTool === "line"){
-                this.clearCanvas();
+                this.refreshCanvas();
                 this.ctx.beginPath();
                 this.ctx.moveTo(this.startX,this.startY);
-                this.ctx.lineTo(e.clientX, e.clientY);
+                this.ctx.lineTo(x, y);
                 this.ctx.stroke();
             }
               
         }
+    }
+
+    //To clear the canvas, and give back blank canvas
+    resetCanvas(){
+        this.ctx.clearRect(0,0, this.canvas.width, this.canvas.height);
+        this.ctx.fillStyle = "rgba(0,0,0)";
+        this.ctx.fillRect(0,0, this.canvas.width, this.canvas.height);
     }
 
     initMouseHandler(){
@@ -249,5 +319,13 @@ export class Game {
         this.canvas.removeEventListener("mousemove",this.mouseMoveHandler);
     }
 
-
+    //If canvas is panned or scaled we need the virtual coordinates, because screen coords remain same but canvas coords changes
+    transformPanScale(
+        clientX: number, clientY: number
+    ) : { x: number; y: number }{
+        const rect = this.canvas.getBoundingClientRect();  //pixel diff between viewport and element
+        const x = (clientX - rect.left - this.panX) / this.scale;
+        const y = (clientY - rect.top - this.panY) / this.scale;
+        return { x , y };
+    }
 }
